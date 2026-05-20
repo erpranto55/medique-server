@@ -166,6 +166,22 @@ app.get("/bookings", async (req, res) => {
   }
 });
 
+// GET ALL BOOKINGS
+app.get("/bookings", async (req, res) => {
+  try {
+    const result = await bookingsCollection.find().toArray();
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      message: "Failed To Fetch Bookings",
+    });
+  }
+});
+
+// DELETE BOOKING
 app.delete("/bookings/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -181,7 +197,7 @@ app.delete("/bookings/:id", async (req, res) => {
     console.log(error);
 
     res.status(500).send({
-      message: "Failed to delete booking",
+      message: "Failed To Delete Booking",
     });
   }
 });
