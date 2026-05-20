@@ -1,19 +1,23 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 dotenv.config();
 
 const app = express();
+
 const port = process.env.PORT || 5000;
 
 // ================= MIDDLEWARE =================
 app.use(cors());
+
 app.use(express.json());
 
 // ================= VARIABLES =================
 let tutorsCollection;
+
 let bookingsCollection;
 
 // ================= MONGODB URI =================
@@ -23,7 +27,9 @@ const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
+
     strict: true,
+
     deprecationErrors: true,
   },
 });
@@ -44,6 +50,27 @@ app.get("/tutors", async (req, res) => {
 
     res.status(500).send({
       message: "Failed to fetch tutors",
+    });
+  }
+});
+
+// ================= GET MY TUTORS =================
+app.get("/my-tutors", async (req, res) => {
+  try {
+    const email = req.query.email;
+
+    const query = {
+      email: email,
+    };
+
+    const result = await tutorsCollection.find(query).toArray();
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      message: "Failed To Fetch Tutors",
     });
   }
 });
@@ -151,22 +178,7 @@ app.post("/bookings", async (req, res) => {
   }
 });
 
-// ================= GET BOOKINGS =================
-app.get("/bookings", async (req, res) => {
-  try {
-    const result = await bookingsCollection.find().toArray();
-
-    res.send(result);
-  } catch (error) {
-    console.log("Error fetching bookings:", error);
-
-    res.status(500).send({
-      message: "Failed to fetch bookings",
-    });
-  }
-});
-
-// GET ALL BOOKINGS
+// ================= GET MY BOOKINGS =================
 app.get("/bookings", async (req, res) => {
   try {
     const email = req.query.email;
@@ -187,7 +199,7 @@ app.get("/bookings", async (req, res) => {
   }
 });
 
-// DELETE BOOKING
+// ================= DELETE BOOKING =================
 app.delete("/bookings/:id", async (req, res) => {
   try {
     const id = req.params.id;
