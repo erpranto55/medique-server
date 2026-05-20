@@ -166,6 +166,26 @@ app.get("/bookings", async (req, res) => {
   }
 });
 
+app.delete("/bookings/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const query = {
+      _id: new ObjectId(id),
+    };
+
+    const result = await bookingsCollection.deleteOne(query);
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      message: "Failed to delete booking",
+    });
+  }
+});
+
 // ================= DATABASE CONNECTION =================
 async function run() {
   try {
