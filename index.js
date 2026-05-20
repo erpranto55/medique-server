@@ -169,7 +169,13 @@ app.get("/bookings", async (req, res) => {
 // GET ALL BOOKINGS
 app.get("/bookings", async (req, res) => {
   try {
-    const result = await bookingsCollection.find().toArray();
+    const email = req.query.email;
+
+    const query = {
+      email: email,
+    };
+
+    const result = await bookingsCollection.find(query).toArray();
 
     res.send(result);
   } catch (error) {
