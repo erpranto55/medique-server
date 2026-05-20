@@ -8,14 +8,18 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// MIDDLEWARE
+// ================= MIDDLEWARE =================
 app.use(cors());
 app.use(express.json());
 
-// MONGODB URI
+// ================= VARIABLES =================
+let tutorsCollection;
+let bookingsCollection;
+
+// ================= MONGODB URI =================
 const uri = process.env.MONGODB_URI;
 
-// CLIENT
+// ================= CLIENT =================
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -24,100 +28,168 @@ const client = new MongoClient(uri, {
   },
 });
 
-// ================= ROUTES =================
-
-// ROOT ROUTE
+// ================= ROOT ROUTE =================
 app.get("/", (req, res) => {
   res.send("MediQueue Server Running");
 });
 
-app.get("/tutors", async (req, res) => {
-  const result = await tutorsCollection.find().toArray();
-  res.send(result);
-});
-
-// ADD TUTOR
-app.post("/tutors", async (req, res) => {
-  try {
-    const tutorData = req.body;
-    const result = await tutorsCollection.insertOne(tutorData);
-    res.send(result);
-  } catch (error) {
-    console.log("Error adding tutor:", error);
-    res.status(500).send({ message: "Failed to add tutor" });
-  }
-});
-
-// GET ALL TUTORS
+// ================= GET ALL TUTORS =================
 app.get("/tutors", async (req, res) => {
   try {
     const result = await tutorsCollection.find().toArray();
+
     res.send(result);
   } catch (error) {
     console.log("Error fetching tutors:", error);
-    res.status(500).send({ message: "Failed to fetch tutors" });
+
+    res.status(500).send({
+      message: "Failed to fetch tutors",
+    });
   }
 });
 
-// GET SINGLE TUTOR
+// ================= GET SINGLE TUTOR =================
 app.get("/tutors/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const query = { _id: new ObjectId(id) };
+
+    const query = {
+      _id: new ObjectId(id),
+    };
+
     const result = await tutorsCollection.findOne(query);
+
     res.send(result);
   } catch (error) {
     console.log("Error fetching tutor:", error);
-    res.status(500).send({ message: "Failed to fetch tutor" });
+
+    res.status(500).send({
+      message: "Failed to fetch tutor",
+    });
   }
 });
 
-// DELETE TUTOR
-app.delete("/tutors/:id", async (req, res) => {
+// ================= ADD TUTOR =================
+app.post("/tutors", async (req, res) => {
   try {
-    const id = req.params.id;
-    const query = { _id: new ObjectId(id) };
-    const result = await tutorsCollection.deleteOne(query);
+    const tutorData = req.body;
+
+    const result = await tutorsCollection.insertOne(tutorData);
+
     res.send(result);
   } catch (error) {
-    console.log("Error deleting tutor:", error);
-    res.status(500).send({ message: "Failed to delete tutor" });
+    console.log("Error adding tutor:", error);
+
+    res.status(500).send({
+      message: "Failed to add tutor",
+    });
   }
 });
 
-// UPDATE TUTOR
+// ================= UPDATE TUTOR =================
 app.put("/tutors/:id", async (req, res) => {
   try {
     const id = req.params.id;
+
     const updatedData = req.body;
-    const query = { _id: new ObjectId(id) };
-    const updatedDoc = { $set: updatedData };
+
+    const query = {
+      _id: new ObjectId(id),
+    };
+
+    const updatedDoc = {
+      $set: updatedData,
+    };
+
     const result = await tutorsCollection.updateOne(query, updatedDoc);
+
     res.send(result);
   } catch (error) {
     console.log("Error updating tutor:", error);
-    res.status(500).send({ message: "Failed to update tutor" });
+
+    res.status(500).send({
+      message: "Failed to update tutor",
+    });
   }
 });
 
-// ================= DB CONNECTION & SERVER =================
+// ================= DELETE TUTOR =================
+app.delete("/tutors/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
 
+    const query = {
+      _id: new ObjectId(id),
+    };
+
+    const result = await tutorsCollection.deleteOne(query);
+
+    res.send(result);
+  } catch (error) {
+    console.log("Error deleting tutor:", error);
+
+    res.status(500).send({
+      message: "Failed to delete tutor",
+    });
+  }
+});
+
+// ================= CREATE BOOKING =================
+app.post("/bookings", async (req, res) => {
+  try {
+    const bookingData = req.body;
+
+    const result = await bookingsCollection.insertOne(bookingData);
+
+    res.send(result);
+  } catch (error) {
+    console.log("Booking Error:", error);
+
+    res.status(500).send({
+      message: "Booking Failed",
+    });
+  }
+});
+
+// ================= GET BOOKINGS =================
+app.get("/bookings", async (req, res) => {
+  try {
+    const result = await bookingsCollection.find().toArray();
+
+    res.send(result);
+  } catch (error) {
+    console.log("Error fetching bookings:", error);
+
+    res.status(500).send({
+      message: "Failed to fetch bookings",
+    });
+  }
+});
+
+// ================= DATABASE CONNECTION =================
 async function run() {
   try {
-    // CONNECT
     await client.connect();
-    // PING
-    await client.db("admin").command({ ping: 1 });
+
+    await client.db("admin").command({
+      ping: 1,
+    });
+
     console.log("MongoDB Connected Successfully");
+
     const database = client.db("mediqueueDB");
+
     tutorsCollection = database.collection("tutors");
+
+    bookingsCollection = database.collection("bookings");
   } catch (error) {
-    console.error("MongoDB Connection Failed:", error);
+    console.log("MongoDB Connection Failed:", error);
   }
 }
+
 run().catch(console.dir);
 
-// SERVER
+// ================= SERVER =================
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
