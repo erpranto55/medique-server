@@ -324,6 +324,10 @@ app.get("/bookings", verifyToken, async (req, res) => {
       .find({
         studentEmail: email,
       })
+      .sort({
+        status: 1,
+        bookedAt: -1,
+      })
       .toArray();
 
     res.send(result);
