@@ -7,7 +7,7 @@ The server handles authentication, tutor management, booking management, JWT aut
 
 ## Live API
 
-Server Live Link: https://your-server-url.vercel.app
+Server Live Link: https://medique-server-h4hl.onrender.com/
 
 ---
 
