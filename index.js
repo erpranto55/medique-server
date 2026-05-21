@@ -457,32 +457,44 @@ app.get("/users", async (req, res) => {
 app.put("/users/:email", verifyToken, async (req, res) => {
   try {
     const email = req.params.email;
-    const updatedUser = req.body;
+    const updatedData = req.body;
 
+    // SECURITY CHECK
     if (req.decoded.email !== email) {
       return res.status(403).send({
         message: "Forbidden Access",
       });
     }
 
-    const result = await usersCollection.updateOne(
-      { email },
-      {
-        $set: updatedUser,
-      },
-      { upsert: true },
-    );
+    const filter = { email };
 
-    res.send(result);
+    const updatedDoc = {
+      $set: {
+        name: updatedData.name,
+        photoURL: updatedData.photoURL,
+        email: updatedData.email,
+        updatedAt: new Date(),
+      },
+    };
+
+    const options = { upsert: true };
+
+    const result = await usersCollection.updateOne(filter, updatedDoc, options);
+
+    res.send({
+      success: true,
+      message: "User Updated Successfully",
+      result,
+    });
   } catch (error) {
     console.log(error);
 
     res.status(500).send({
+      success: false,
       message: "Failed To Update User",
     });
   }
 });
-
 // ================= DATABASE CONNECTION =================
 async function run() {
   try {
