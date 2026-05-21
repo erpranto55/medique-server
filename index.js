@@ -226,13 +226,68 @@ app.post("/bookings", async (req, res) => {
   }
 });
 
+// ================= DELETE BOOKING =================
+app.patch("/bookings/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const booking = await bookingsCollection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    // BOOKING NOT FOUND
+    if (!booking) {
+      return res.status(404).send({
+        message: "Booking not found",
+      });
+    }
+
+    // UPDATE STATUS
+    const result = await bookingsCollection.updateOne(
+      {
+        _id: new ObjectId(id),
+      },
+      {
+        $set: {
+          status: "cancelled",
+        },
+      },
+    );
+
+    // RETURN SLOT
+    await tutorsCollection.updateOne(
+      {
+        _id: new ObjectId(booking.tutorId),
+      },
+      {
+        $inc: {
+          totalSlot: 1,
+        },
+      },
+    );
+
+    res.send({
+      success: true,
+      message: "Booking cancelled",
+      result,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      success: false,
+      message: "Failed to cancel booking",
+    });
+  }
+});
+
 // ================= GET MY BOOKINGS =================
 app.get("/bookings", async (req, res) => {
   try {
     const email = req.query.email;
 
     const query = {
-      email: email,
+      studentEmail: email,
     };
 
     const result = await bookingsCollection.find(query).toArray();
