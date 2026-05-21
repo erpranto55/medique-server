@@ -254,6 +254,20 @@ app.post("/users", async (req, res) => {
   }
 });
 
+// GET ALL USERS
+app.get("/users", async (req, res) => {
+  try {
+    const result = await usersCollection.find().toArray();
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      message: "Failed To Fetch Users",
+    });
+  }
+});
 
 // ================= DATABASE CONNECTION =================
 async function run() {
