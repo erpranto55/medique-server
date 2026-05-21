@@ -14,7 +14,15 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // ================= MIDDLEWARE =================
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://medique-server-h4hl.onrender.com",
+    ],
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 
@@ -185,11 +193,18 @@ app.post("/tutors", async (req, res) => {
 });
 
 // ================= UPDATE TUTOR =================
-app.put("/tutors/:id", async (req, res) => {
+app.put("/tutors/:id", verifyToken, async (req, res) => {
   try {
     const id = req.params.id;
 
     const updatedData = req.body;
+
+    // VERIFY OWNER
+    if (req.decoded.email !== updatedData.email) {
+      return res.status(403).send({
+        message: "Forbidden Access",
+      });
+    }
 
     const query = {
       _id: new ObjectId(id),
@@ -212,9 +227,21 @@ app.put("/tutors/:id", async (req, res) => {
 });
 
 // ================= DELETE TUTOR =================
-app.delete("/tutors/:id", async (req, res) => {
+app.delete("/tutors/:id", verifyToken, async (req, res) => {
   try {
     const id = req.params.id;
+
+    // FIND TUTOR
+    const tutor = await tutorsCollection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    // VERIFY OWNER
+    if (req.decoded.email !== tutor.email) {
+      return res.status(403).send({
+        message: "Forbidden Access",
+      });
+    }
 
     const query = {
       _id: new ObjectId(id),
