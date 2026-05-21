@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const jwt = require("jsonwebtoken");
-
 const cookieParser = require("cookie-parser");
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -10,7 +9,6 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 dotenv.config();
 
 const app = express();
-
 const port = process.env.PORT || 5000;
 
 // ================= MIDDLEWARE =================
@@ -22,31 +20,26 @@ app.use(
 );
 
 app.use(express.json());
-
 app.use(cookieParser());
 
-// ================= VARIABLES =================
+// ================= COLLECTION VARIABLES =================
 let tutorsCollection;
-
 let bookingsCollection;
-
 let usersCollection;
 
 // ================= MONGODB URI =================
 const uri = process.env.MONGODB_URI;
 
-// ================= CLIENT =================
+// ================= MONGODB CLIENT =================
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
-
     strict: true,
-
     deprecationErrors: true,
   },
 });
 
-// ================= ROOT ROUTE =================
+// ================= ROOT =================
 app.get("/", (req, res) => {
   res.send("MediQueue Server Running");
 });
@@ -59,23 +52,19 @@ app.post("/jwt", async (req, res) => {
     expiresIn: "7d",
   });
 
-  res.send({
-    token,
-  });
+  res.send({ token });
 });
 
 // ================= VERIFY TOKEN =================
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  // NO TOKEN
   if (!authHeader) {
     return res.status(401).send({
       message: "Unauthorized Access",
     });
   }
 
-  // GET TOKEN
   const token = authHeader.split(" ")[1];
 
   jwt.verify(token, process.env.JWT_SECRET, (error, decoded) => {
@@ -86,12 +75,11 @@ const verifyToken = (req, res, next) => {
     }
 
     req.decoded = decoded;
-
     next();
   });
 };
 
-// ================= GET ALL TUTORS WITH SEARCH & DATE FILTER =================
+// ================= GET ALL TUTORS =================
 app.get("/tutors", async (req, res) => {
   try {
     const { search = "", startDate, endDate } = req.query;
@@ -103,11 +91,9 @@ app.get("/tutors", async (req, res) => {
       },
     };
 
-    // DATE FILTER
     if (startDate && endDate) {
       query.sessionStartDate = {
         $gte: startDate,
-
         $lte: endDate,
       };
     }
@@ -116,7 +102,7 @@ app.get("/tutors", async (req, res) => {
 
     res.send(result);
   } catch (error) {
-    console.log("Error fetching tutors:", error);
+    console.log(error);
 
     res.status(500).send({
       message: "Failed to fetch tutors",
@@ -129,15 +115,13 @@ app.get("/my-tutors", verifyToken, async (req, res) => {
   try {
     const email = req.query.email;
 
-    // TOKEN EMAIL CHECK
     if (req.decoded.email !== email) {
       return res.status(403).send({
         message: "Forbidden Access",
       });
     }
-    const query = {
-      email: email,
-    };
+
+    const query = { email };
 
     const result = await tutorsCollection.find(query).toArray();
 
@@ -156,15 +140,13 @@ app.get("/tutors/:id", async (req, res) => {
   try {
     const id = req.params.id;
 
-    const query = {
+    const result = await tutorsCollection.findOne({
       _id: new ObjectId(id),
-    };
-
-    const result = await tutorsCollection.findOne(query);
+    });
 
     res.send(result);
   } catch (error) {
-    console.log("Error fetching tutor:", error);
+    console.log(error);
 
     res.status(500).send({
       message: "Failed to fetch tutor",
@@ -181,7 +163,7 @@ app.post("/tutors", async (req, res) => {
 
     res.send(result);
   } catch (error) {
-    console.log("Error adding tutor:", error);
+    console.log(error);
 
     res.status(500).send({
       message: "Failed to add tutor",
@@ -193,29 +175,26 @@ app.post("/tutors", async (req, res) => {
 app.put("/tutors/:id", verifyToken, async (req, res) => {
   try {
     const id = req.params.id;
-
     const updatedData = req.body;
 
-    // VERIFY OWNER
     if (req.decoded.email !== updatedData.email) {
       return res.status(403).send({
         message: "Forbidden Access",
       });
     }
 
-    const query = {
-      _id: new ObjectId(id),
-    };
-
-    const updatedDoc = {
-      $set: updatedData,
-    };
-
-    const result = await tutorsCollection.updateOne(query, updatedDoc);
+    const result = await tutorsCollection.updateOne(
+      {
+        _id: new ObjectId(id),
+      },
+      {
+        $set: updatedData,
+      },
+    );
 
     res.send(result);
   } catch (error) {
-    console.log("Error updating tutor:", error);
+    console.log(error);
 
     res.status(500).send({
       message: "Failed to update tutor",
@@ -228,27 +207,29 @@ app.delete("/tutors/:id", verifyToken, async (req, res) => {
   try {
     const id = req.params.id;
 
-    // FIND TUTOR
     const tutor = await tutorsCollection.findOne({
       _id: new ObjectId(id),
     });
 
-    // VERIFY OWNER
+    if (!tutor) {
+      return res.status(404).send({
+        message: "Tutor not found",
+      });
+    }
+
     if (req.decoded.email !== tutor.email) {
       return res.status(403).send({
         message: "Forbidden Access",
       });
     }
 
-    const query = {
+    const result = await tutorsCollection.deleteOne({
       _id: new ObjectId(id),
-    };
-
-    const result = await tutorsCollection.deleteOne(query);
+    });
 
     res.send(result);
   } catch (error) {
-    console.log("Error deleting tutor:", error);
+    console.log(error);
 
     res.status(500).send({
       message: "Failed to delete tutor",
@@ -260,15 +241,12 @@ app.delete("/tutors/:id", verifyToken, async (req, res) => {
 app.post("/bookings", async (req, res) => {
   try {
     const bookingData = req.body;
-
     const tutorId = bookingData.tutorId;
 
-    // FIND TUTOR
     const tutor = await tutorsCollection.findOne({
       _id: new ObjectId(tutorId),
     });
 
-    // TUTOR NOT FOUND
     if (!tutor) {
       return res.status(404).send({
         success: false,
@@ -276,74 +254,35 @@ app.post("/bookings", async (req, res) => {
       });
     }
 
-    // ================= SESSION DATE RESTRICTION =================
-
-    const today = new Date();
-
-    const sessionDate = new Date(tutor.sessionStartDate);
-
-    // REMOVE TIME
-    today.setHours(0, 0, 0, 0);
-
-    sessionDate.setHours(0, 0, 0, 0);
-
-    // BLOCK EARLY BOOKING
-    if (today < sessionDate) {
-      return res.send({
-        success: false,
-        message: "Booking is not available yet for this tutor",
-      });
-    }
-
-    // ================= GET MY BOOKINGS =================
-    app.get("/bookings", verifyToken, async (req, res) => {
-      try {
-        const email = req.query.email;
-
-        // TOKEN EMAIL CHECK
-        if (req.decoded.email !== email) {
-          return res.status(403).send({
-            message: "Forbidden Access",
-          });
-        }
-
-        const query = {
-          studentEmail: email,
-        };
-
-        const result = await bookingsCollection.find(query).toArray();
-
-        res.send(result);
-      } catch (error) {
-        console.log(error);
-
-        res.status(500).send({
-          message: "Failed To Fetch Bookings",
-        });
-      }
-    });
-
-    // ================= SLOT CHECK =================
-
+    // CHECK SLOT
     if (tutor.totalSlot <= 0) {
       return res.send({
         success: false,
-        message: "This session is fully booked. You can’t join at the moment.",
+        message: "This session is fully booked",
       });
     }
 
-    // ================= SAVE BOOKING =================
+    // PREVENT DUPLICATE BOOKING
+    const existingBooking = await bookingsCollection.findOne({
+      tutorId,
+      studentEmail: bookingData.studentEmail,
+    });
 
+    if (existingBooking) {
+      return res.send({
+        success: false,
+        message: "You already booked this tutor",
+      });
+    }
+
+    // SAVE BOOKING
     const result = await bookingsCollection.insertOne({
       ...bookingData,
-
       status: "booked",
-
       bookedAt: new Date(),
     });
 
-    // ================= DECREASE SLOT =================
-
+    // DECREASE SLOT
     await tutorsCollection.updateOne(
       {
         _id: new ObjectId(tutorId),
@@ -355,12 +294,10 @@ app.post("/bookings", async (req, res) => {
       },
     );
 
-    // ================= SUCCESS =================
-
     res.send({
       success: true,
+      insertedId: result.insertedId,
       message: "Booking successful",
-      result,
     });
   } catch (error) {
     console.log(error);
@@ -372,7 +309,34 @@ app.post("/bookings", async (req, res) => {
   }
 });
 
-// ================= Cancel BOOKING =================
+// ================= GET MY BOOKINGS =================
+app.get("/bookings", verifyToken, async (req, res) => {
+  try {
+    const email = req.query.email;
+
+    if (req.decoded.email !== email) {
+      return res.status(403).send({
+        message: "Forbidden Access",
+      });
+    }
+
+    const result = await bookingsCollection
+      .find({
+        studentEmail: email,
+      })
+      .toArray();
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      message: "Failed To Fetch Bookings",
+    });
+  }
+});
+
+// ================= CANCEL BOOKING =================
 app.patch("/bookings/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -381,14 +345,12 @@ app.patch("/bookings/:id", async (req, res) => {
       _id: new ObjectId(id),
     });
 
-    // BOOKING NOT FOUND
     if (!booking) {
       return res.status(404).send({
         message: "Booking not found",
       });
     }
 
-    // UPDATE STATUS
     const result = await bookingsCollection.updateOne(
       {
         _id: new ObjectId(id),
@@ -400,7 +362,6 @@ app.patch("/bookings/:id", async (req, res) => {
       },
     );
 
-    // RETURN SLOT
     await tutorsCollection.updateOne(
       {
         _id: new ObjectId(booking.tutorId),
@@ -427,37 +388,14 @@ app.patch("/bookings/:id", async (req, res) => {
   }
 });
 
-// ================= GET MY BOOKINGS =================
-app.get("/bookings", async (req, res) => {
-  try {
-    const email = req.query.email;
-
-    const query = {
-      studentEmail: email,
-    };
-
-    const result = await bookingsCollection.find(query).toArray();
-
-    res.send(result);
-  } catch (error) {
-    console.log(error);
-
-    res.status(500).send({
-      message: "Failed To Fetch Bookings",
-    });
-  }
-});
-
 // ================= DELETE BOOKING =================
 app.delete("/bookings/:id", async (req, res) => {
   try {
     const id = req.params.id;
 
-    const query = {
+    const result = await bookingsCollection.deleteOne({
       _id: new ObjectId(id),
-    };
-
-    const result = await bookingsCollection.deleteOne(query);
+    });
 
     res.send(result);
   } catch (error) {
@@ -474,21 +412,16 @@ app.post("/users", async (req, res) => {
   try {
     const userData = req.body;
 
-    // CHECK EXISTING USER
-    const query = {
+    const existingUser = await usersCollection.findOne({
       email: userData.email,
-    };
+    });
 
-    const existingUser = await usersCollection.findOne(query);
-
-    // IF USER EXISTS
     if (existingUser) {
       return res.send({
         message: "User already exists",
       });
     }
 
-    // SAVE NEW USER
     const result = await usersCollection.insertOne(userData);
 
     res.send(result);
@@ -501,7 +434,7 @@ app.post("/users", async (req, res) => {
   }
 });
 
-// GET ALL USERS
+// ================= GET USERS =================
 app.get("/users", async (req, res) => {
   try {
     const result = await usersCollection.find().toArray();
@@ -530,9 +463,7 @@ async function run() {
     const database = client.db("mediqueueDB");
 
     tutorsCollection = database.collection("tutors");
-
     bookingsCollection = database.collection("bookings");
-
     usersCollection = database.collection("users");
   } catch (error) {
     console.log("MongoDB Connection Failed:", error);
