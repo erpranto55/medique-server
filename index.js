@@ -41,10 +41,19 @@ app.get("/", (req, res) => {
   res.send("MediQueue Server Running");
 });
 
-// ================= GET ALL TUTORS =================
+// ================= GET ALL TUTORS WITH SEARCH =================
 app.get("/tutors", async (req, res) => {
   try {
-    const result = await tutorsCollection.find().toArray();
+    const search = req.query.search || "";
+
+    const query = {
+      name: {
+        $regex: search,
+        $options: "i",
+      },
+    };
+
+    const result = await tutorsCollection.find(query).toArray();
 
     res.send(result);
   } catch (error) {
@@ -226,7 +235,7 @@ app.post("/bookings", async (req, res) => {
   }
 });
 
-// ================= DELETE BOOKING =================
+// ================= Cancel BOOKING =================
 app.patch("/bookings/:id", async (req, res) => {
   try {
     const id = req.params.id;
