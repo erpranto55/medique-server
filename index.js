@@ -120,10 +120,16 @@ app.get("/tutors", async (req, res) => {
 });
 
 // ================= GET MY TUTORS =================
-app.get("/my-tutors", async (req, res) => {
+app.get("/my-tutors", verifyToken, async (req, res) => {
   try {
     const email = req.query.email;
 
+    // TOKEN EMAIL CHECK
+    if (req.decoded.email !== email) {
+      return res.status(403).send({
+        message: "Forbidden Access",
+      });
+    }
     const query = {
       email: email,
     };
@@ -264,6 +270,34 @@ app.post("/bookings", async (req, res) => {
         message: "Booking is not available yet for this tutor",
       });
     }
+
+    // ================= GET MY BOOKINGS =================
+    app.get("/bookings", verifyToken, async (req, res) => {
+      try {
+        const email = req.query.email;
+
+        // TOKEN EMAIL CHECK
+        if (req.decoded.email !== email) {
+          return res.status(403).send({
+            message: "Forbidden Access",
+          });
+        }
+
+        const query = {
+          studentEmail: email,
+        };
+
+        const result = await bookingsCollection.find(query).toArray();
+
+        res.send(result);
+      } catch (error) {
+        console.log(error);
+
+        res.status(500).send({
+          message: "Failed To Fetch Bookings",
+        });
+      }
+    });
 
     // ================= SLOT CHECK =================
 
