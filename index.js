@@ -168,13 +168,59 @@ app.post("/bookings", async (req, res) => {
   try {
     const bookingData = req.body;
 
-    const result = await bookingsCollection.insertOne(bookingData);
+    const tutorId = bookingData.tutorId;
 
-    res.send(result);
+    // FIND TUTOR
+    const tutor = await tutorsCollection.findOne({
+      _id: new ObjectId(tutorId),
+    });
+
+    // TUTOR NOT FOUND
+    if (!tutor) {
+      return res.status(404).send({
+        message: "Tutor not found",
+      });
+    }
+
+    // CHECK SLOT
+    if (tutor.totalSlot <= 0) {
+      return res.send({
+        success: false,
+        message: "No available slots left",
+      });
+    }
+
+    // SAVE BOOKING
+    const result = await bookingsCollection.insertOne({
+      ...bookingData,
+
+      status: "booked",
+
+      bookedAt: new Date(),
+    });
+
+    // DECREASE SLOT
+    await tutorsCollection.updateOne(
+      {
+        _id: new ObjectId(tutorId),
+      },
+      {
+        $inc: {
+          totalSlot: -1,
+        },
+      },
+    );
+
+    res.send({
+      success: true,
+      message: "Booking successful",
+      result,
+    });
   } catch (error) {
-    console.log("Booking Error:", error);
+    console.log(error);
 
     res.status(500).send({
+      success: false,
       message: "Booking Failed",
     });
   }
