@@ -16,10 +16,7 @@ const port = process.env.PORT || 5000;
 // ================= MIDDLEWARE =================
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "https://medique-server-h4hl.onrender.com",
-    ],
+    origin: ["http://localhost:3000", "https://medique-ashy.vercel.app"],
     credentials: true,
   }),
 );
