@@ -187,19 +187,41 @@ app.post("/bookings", async (req, res) => {
     // TUTOR NOT FOUND
     if (!tutor) {
       return res.status(404).send({
+        success: false,
         message: "Tutor not found",
       });
     }
 
-    // CHECK SLOT
-    if (tutor.totalSlot <= 0) {
+    // ================= SESSION DATE RESTRICTION =================
+
+    const today = new Date();
+
+    const sessionDate = new Date(tutor.sessionStartDate);
+
+    // REMOVE TIME
+    today.setHours(0, 0, 0, 0);
+
+    sessionDate.setHours(0, 0, 0, 0);
+
+    // BLOCK EARLY BOOKING
+    if (today < sessionDate) {
       return res.send({
         success: false,
-        message: "No available slots left",
+        message: "Booking is not available yet for this tutor",
       });
     }
 
-    // SAVE BOOKING
+    // ================= SLOT CHECK =================
+
+    if (tutor.totalSlot <= 0) {
+      return res.send({
+        success: false,
+        message: "This session is fully booked. You can’t join at the moment.",
+      });
+    }
+
+    // ================= SAVE BOOKING =================
+
     const result = await bookingsCollection.insertOne({
       ...bookingData,
 
@@ -208,7 +230,8 @@ app.post("/bookings", async (req, res) => {
       bookedAt: new Date(),
     });
 
-    // DECREASE SLOT
+    // ================= DECREASE SLOT =================
+
     await tutorsCollection.updateOne(
       {
         _id: new ObjectId(tutorId),
@@ -219,6 +242,8 @@ app.post("/bookings", async (req, res) => {
         },
       },
     );
+
+    // ================= SUCCESS =================
 
     res.send({
       success: true,
