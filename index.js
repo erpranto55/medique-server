@@ -1,6 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const jwt = require("jsonwebtoken");
+
+const cookieParser = require("cookie-parser");
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
@@ -14,6 +17,8 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 
 app.use(express.json());
+
+app.use(cookieParser());
 
 // ================= VARIABLES =================
 let tutorsCollection;
@@ -41,10 +46,50 @@ app.get("/", (req, res) => {
   res.send("MediQueue Server Running");
 });
 
-// ================= GET ALL TUTORS WITH SEARCH =================
+// ================= JWT =================
+app.post("/jwt", async (req, res) => {
+  const user = req.body;
+
+  const token = jwt.sign(user, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+
+  res.send({
+    token,
+  });
+});
+
+// ================= VERIFY TOKEN =================
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  // NO TOKEN
+  if (!authHeader) {
+    return res.status(401).send({
+      message: "Unauthorized Access",
+    });
+  }
+
+  // GET TOKEN
+  const token = authHeader.split(" ")[1];
+
+  jwt.verify(token, process.env.JWT_SECRET, (error, decoded) => {
+    if (error) {
+      return res.status(401).send({
+        message: "Unauthorized Access",
+      });
+    }
+
+    req.decoded = decoded;
+
+    next();
+  });
+};
+
+// ================= GET ALL TUTORS WITH SEARCH & DATE FILTER =================
 app.get("/tutors", async (req, res) => {
   try {
-    const search = req.query.search || "";
+    const { search = "", startDate, endDate } = req.query;
 
     const query = {
       name: {
@@ -52,6 +97,15 @@ app.get("/tutors", async (req, res) => {
         $options: "i",
       },
     };
+
+    // DATE FILTER
+    if (startDate && endDate) {
+      query.sessionStartDate = {
+        $gte: startDate,
+
+        $lte: endDate,
+      };
+    }
 
     const result = await tutorsCollection.find(query).toArray();
 
