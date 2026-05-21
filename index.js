@@ -20,6 +20,8 @@ let tutorsCollection;
 
 let bookingsCollection;
 
+let usersCollection;
+
 // ================= MONGODB URI =================
 const uri = process.env.MONGODB_URI;
 
@@ -220,6 +222,39 @@ app.delete("/bookings/:id", async (req, res) => {
   }
 });
 
+// ================= SAVE USER =================
+app.post("/users", async (req, res) => {
+  try {
+    const userData = req.body;
+
+    // CHECK EXISTING USER
+    const query = {
+      email: userData.email,
+    };
+
+    const existingUser = await usersCollection.findOne(query);
+
+    // IF USER EXISTS
+    if (existingUser) {
+      return res.send({
+        message: "User already exists",
+      });
+    }
+
+    // SAVE NEW USER
+    const result = await usersCollection.insertOne(userData);
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).send({
+      message: "Failed To Save User",
+    });
+  }
+});
+
+
 // ================= DATABASE CONNECTION =================
 async function run() {
   try {
@@ -236,6 +271,8 @@ async function run() {
     tutorsCollection = database.collection("tutors");
 
     bookingsCollection = database.collection("bookings");
+
+    usersCollection = database.collection("users");
   } catch (error) {
     console.log("MongoDB Connection Failed:", error);
   }
